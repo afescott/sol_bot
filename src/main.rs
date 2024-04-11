@@ -1,6 +1,7 @@
-use std::fmt::Display;
+use std::{fmt::Display, sync::Arc};
 
 use error::{PairResponse, Result};
+use repositories::models::Token;
 pub use reqwest::{self, Client, IntoUrl, Url};
 use reqwest::{header, RequestBuilder};
 
@@ -10,11 +11,43 @@ mod error;
 pub mod format;
 pub use format::format_addresses;
 use serde::de::DeserializeOwned;
+
+use crate::api::webhook::webhook_messages;
+pub mod api;
 pub mod pair;
+pub mod repositories;
 
 pub const BASE_URL: &str = "https://api.dexscreener.com/latest/";
 
-fn main() {}
+#[tokio::main]
+async fn main() {
+    let mut tokens: Vec<Token> = Vec::new();
+
+    let (tx, mut rx) = tokio::sync::mpsc::channel(10000);
+
+    let client = DexClient::default();
+
+    // thread 1: access webhook. use channel to send new tokens
+    let r = tokio::spawn(async move {
+        webhook_messages(tx).await;
+    });
+
+    //thread 2: receive new tokens.  search via dexclient & other sources
+    let s = tokio::spawn(async move {
+        while let Some(i) = rx.recv().await {
+            for ele in i {
+                println!("{:?}", ele);
+                if !tokens.contains(&ele) {
+                    tokens.push(ele.clone());
+                }
+            }
+
+            println!("{:?}", tokens)
+        }
+    });
+
+    let _r = tokio::join!(r, s);
+}
 
 /// A [Dexscreener API](https://docs.dexscreener.com/api/reference) HTTP client.
 #[derive(Clone, Debug)]
@@ -33,25 +66,6 @@ impl Default for DexClient {
 }
 
 impl DexClient {
-    /// Instantiate a new client with the [base URL][BASE_URL].
-    /* pub fn new() -> Self {
-        Self::with_url(BASE_URL).unwrap()
-    } */
-
-    /// Instantiate a new client with the provided URL.
-    /* pub fn with_url(url: impl IntoUrl) -> Result<Self> {
-        Self::with_url_and_client(url, Client::new())
-    } */
-
-    /*
-    /// Instantiate a new client with the provided URL and reqwest client.
-    pub fn with_url_and_client(url: impl IntoUrl, client: Client) -> Result<Self> {
-        Ok(Self {
-            client,
-            url: url.into_url()?,
-        })
-    } */
-
     async fn get_pair<T: DeserializeOwned>(&self, path: &str) -> Result<String> {
         /*         Ok( */
         Ok(self
@@ -62,9 +76,6 @@ impl DexClient {
             .json::<String>()
             .await
             .unwrap())
-        /*             .await?) */
-
-        /*         todo!() */
     }
 
     fn _get(&self, path: &str) -> Result<RequestBuilder> {
@@ -84,28 +95,16 @@ impl DexClient {
         let addresses = format_addresses(pair_addresses)?;
         let path = format!("dex/pairs/{chain_id}/{addresses}");
         self.get_pair::<String>(&path).await
-
-        /*         Ok("asfaf".to_string()) */
     }
 }
-
-/* mod test {
-use crate::DexClient; */
 
 #[tokio::test]
 async fn test_get_data() {
     let client = DexClient::default();
-
-    /*     let r = client.client.get(client.url).send().await; */
-
     let pair_addresses = [
         "0x7213a321F1855CF1779f42c0CD85d3D95291D34C",
         "0x16b9a82891338f9ba80e2d6970fdda79d1eb0dae",
     ];
     let result = client.pairs("bsc", pair_addresses).await.unwrap();
-    /* .pairs
-    .unwrap(); */
-    /*     assert_eq!(result.len(), 2); */
     println!("{:?}", result)
 }
-/* } */
