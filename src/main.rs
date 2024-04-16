@@ -1,7 +1,4 @@
-use std::{fmt::Display, sync::Arc};
-
-use error::{PairResponse, Result};
-use repositories::models::Token;
+use error::Result;
 pub use reqwest::{self, Client, IntoUrl, Url};
 use reqwest::{header, RequestBuilder};
 
@@ -12,20 +9,29 @@ pub mod format;
 pub use format::format_addresses;
 use serde::de::DeserializeOwned;
 
-use crate::api::webhook::webhook_messages;
+use crate::{
+    api::{filter::pairs_filter, webhook::webhook_messages},
+    repositories::models::{Pair, Pairs, TokenType},
+};
+
 pub mod api;
 pub mod pair;
 pub mod repositories;
+mod util;
 
 pub const BASE_URL: &str = "https://api.dexscreener.com/latest/";
 
 #[tokio::main]
 async fn main() {
-    let mut tokens: Vec<Token> = Vec::new();
+    let time = chrono::DateTime::from_timestamp_millis(1712860625000);
+
+    let mut tokens: Vec<TokenType> = Vec::new();
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(10000);
 
-    let client = DexClient::default();
+    let dex_client = DexClient::default();
+
+    /*     client.search("bite club".to_string()).await; */
 
     // thread 1: access webhook. use channel to send new tokens
     let r = tokio::spawn(async move {
@@ -36,13 +42,15 @@ async fn main() {
     let s = tokio::spawn(async move {
         while let Some(i) = rx.recv().await {
             for ele in i {
-                println!("{:?}", ele);
                 if !tokens.contains(&ele) {
                     tokens.push(ele.clone());
+                    let results = dex_client.search(ele).await;
+                    match results {
+                        Ok(pairs) => pairs_filter(pairs).await,
+                        Err(err) => println!("{:?}", err),
+                    }
                 }
             }
-
-            println!("{:?}", tokens)
         }
     });
 
@@ -66,7 +74,34 @@ impl Default for DexClient {
 }
 
 impl DexClient {
-    async fn get_pair<T: DeserializeOwned>(&self, path: &str) -> Result<String> {
+    fn _get(&self, path: &str) -> Result<RequestBuilder> {
+        let url = self.url.join(path)?;
+        Ok(self
+            .client
+            .get(url)
+            .header(header::ACCEPT, "application/json"))
+    }
+
+    /// Performs an HTTP `GET` request to the `https://api.dexscreener.com/latest/dex/search/?q=:q` path.
+    pub async fn search(&self, token: TokenType) -> Result<Pairs> {
+        let token = match token {
+            TokenType::Id(id) => id,
+            TokenType::Name(name) => name,
+        };
+
+        let path = self.url.join(format!("dex/search?q={}", token).as_str());
+
+        let r = self
+            .client
+            .get(path.unwrap())
+            .header(header::ACCEPT, "application/json")
+            .send()
+            .await?;
+
+        Ok(r.json::<Pairs>().await?)
+    }
+
+    async fn get_token<T: DeserializeOwned>(&self, path: &str) -> Result<String> {
         /*         Ok( */
         Ok(self
             ._get(path)?
@@ -77,34 +112,4 @@ impl DexClient {
             .await
             .unwrap())
     }
-
-    fn _get(&self, path: &str) -> Result<RequestBuilder> {
-        let url = self.url.join(path)?;
-        Ok(self
-            .client
-            .get(url)
-            .header(header::ACCEPT, "application/json"))
-    }
-
-    /// Performs an HTTP `GET` request to the `/dex/pairs/{chain_id}/{pair_addresses}` path.
-    pub async fn pairs(
-        &self,
-        chain_id: impl Display,
-        pair_addresses: impl IntoIterator<Item = impl AsRef<str>>,
-    ) -> Result<String> {
-        let addresses = format_addresses(pair_addresses)?;
-        let path = format!("dex/pairs/{chain_id}/{addresses}");
-        self.get_pair::<String>(&path).await
-    }
-}
-
-#[tokio::test]
-async fn test_get_data() {
-    let client = DexClient::default();
-    let pair_addresses = [
-        "0x7213a321F1855CF1779f42c0CD85d3D95291D34C",
-        "0x16b9a82891338f9ba80e2d6970fdda79d1eb0dae",
-    ];
-    let result = client.pairs("bsc", pair_addresses).await.unwrap();
-    println!("{:?}", result)
 }

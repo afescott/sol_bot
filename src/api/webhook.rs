@@ -6,7 +6,10 @@ use serenity::{
 };
 use tokio::sync::mpsc::Sender;
 
-use crate::{api::filter::filter_msg, repositories::models::Token};
+use crate::{
+    api::filter::filter_msg,
+    repositories::models::{Token, TokenType},
+};
 
 const APP_ID: &str = "1225649067506532515";
 
@@ -15,17 +18,15 @@ const PUB_KEY: &str = "df17ba54623654893e5e094695b24e2027916f9c4c900dd5155ee64d1
 const TOKEN: &str = "Bot MTIyNTY0OTA2NzUwNjUzMjUxNQ.GTgTQL.3pwOAa9MYHmwIs_hF5L2FOnd6sngNbxKTtcBms";
 
 struct Handler {
-    tokens: Vec<Token>,
-    tx: Sender<Vec<Token>>,
+    tokens: Vec<TokenType>,
+    tx: Sender<Vec<TokenType>>,
+    client: reqwest::Client,
 }
 
 #[async_trait::async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        /*         let asfaf = serde_json::to_value(msg).unwrap(); */
-        /*         println!("{:?}", msg); */
-
-        let res = filter_msg(msg).await;
+        let res = filter_msg(msg, &self.client).await;
 
         if let Err(err) = self.tx.send(res).await {
             println!("Channel send error: {:?}", err);
@@ -33,7 +34,7 @@ impl EventHandler for Handler {
     }
 }
 
-pub async fn webhook_messages(tx: Sender<Vec<Token>>) {
+pub async fn webhook_messages(tx: Sender<Vec<TokenType>>) {
     let channel_id = ChannelId::new(1225593082427342902);
     let client = http::Http::new(TOKEN);
 
@@ -50,9 +51,12 @@ pub async fn webhook_messages(tx: Sender<Vec<Token>>) {
         .event_handler(Handler {
             tokens: Vec::new(),
             tx,
+            client: reqwest::Client::new(),
         })
         .await
         .expect("Err creating client");
 
     client.start().await;
 }
+
+pub async fn test_123() {}
