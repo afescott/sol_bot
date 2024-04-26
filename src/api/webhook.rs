@@ -6,10 +6,9 @@ use serenity::{
 };
 use tokio::sync::mpsc::Sender;
 
-use crate::{
-    api::filter::filter_msg,
-    repositories::models::{Token, TokenType},
-};
+use crate::repositories::models::TokenType;
+
+use super::filter::Filter;
 
 const APP_ID: &str = "1225649067506532515";
 
@@ -21,14 +20,18 @@ struct Handler {
     tokens: Vec<TokenType>,
     tx: Sender<Vec<TokenType>>,
     client: reqwest::Client,
+    filter: Filter,
 }
 
 #[async_trait::async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        let res = filter_msg(msg, &self.client).await;
+        let mut filter = Filter {
+            values: self.filter.values.clone(),
+        };
+        let res = filter.filter_msg(msg, &self.client).await;
 
-        if let Err(err) = self.tx.send(res).await {
+        if let Err(err) = self.tx.send(res.to_vec()).await {
             println!("Channel send error: {:?}", err);
         }
     }
@@ -52,6 +55,7 @@ pub async fn webhook_messages(tx: Sender<Vec<TokenType>>) {
             tokens: Vec::new(),
             tx,
             client: reqwest::Client::new(),
+            filter: Filter { values: Vec::new() },
         })
         .await
         .expect("Err creating client");

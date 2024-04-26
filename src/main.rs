@@ -10,8 +10,8 @@ pub use format::format_addresses;
 use serde::de::DeserializeOwned;
 
 use crate::{
-    api::{filter::pairs_filter, webhook::webhook_messages},
-    repositories::models::{Pair, Pairs, TokenType},
+    api::webhook::webhook_messages,
+    repositories::models::{Pairs, TokenType},
 };
 
 pub mod api;
@@ -23,6 +23,12 @@ pub const BASE_URL: &str = "https://api.dexscreener.com/latest/";
 
 #[tokio::main]
 async fn main() {
+    // is this required?
+    //
+    let storage_orders = Arc::new(StorageRepo::<Order>::new());
+
+    let storage_wallet = Arc::new(StorageRepo::<Wallet>::new());
+
     let time = chrono::DateTime::from_timestamp_millis(1712860625000);
 
     let mut tokens: Vec<TokenType> = Vec::new();
@@ -30,8 +36,6 @@ async fn main() {
     let (tx, mut rx) = tokio::sync::mpsc::channel(10000);
 
     let dex_client = DexClient::default();
-
-    /*     client.search("bite club".to_string()).await; */
 
     // thread 1: access webhook. use channel to send new tokens
     let r = tokio::spawn(async move {
@@ -45,10 +49,10 @@ async fn main() {
                 if !tokens.contains(&ele) {
                     tokens.push(ele.clone());
                     let results = dex_client.search(ele).await;
-                    match results {
+                    /* match results {
                         Ok(pairs) => pairs_filter(pairs).await,
                         Err(err) => println!("{:?}", err),
-                    }
+                    } */
                 }
             }
         }
