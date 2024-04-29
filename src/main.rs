@@ -1,4 +1,8 @@
+use std::sync::Arc;
+
+use api::discord::DiscordParser;
 use error::Result;
+use repositories::{mem::StorageRepo, models::TokenFinal};
 pub use reqwest::{self, Client, IntoUrl, Url};
 use reqwest::{header, RequestBuilder};
 
@@ -23,11 +27,8 @@ pub const BASE_URL: &str = "https://api.dexscreener.com/latest/";
 
 #[tokio::main]
 async fn main() {
-    // is this required?
-    //
-    let storage_orders = Arc::new(StorageRepo::<Order>::new());
-
-    let storage_wallet = Arc::new(StorageRepo::<Wallet>::new());
+    tracing_subscriber::fmt::init();
+    let storage_enhanced_transactions = Arc::new(StorageRepo::<TokenFinal>::new());
 
     let time = chrono::DateTime::from_timestamp_millis(1712860625000);
 
@@ -44,16 +45,34 @@ async fn main() {
 
     //thread 2: receive new tokens.  search via dexclient & other sources
     let s = tokio::spawn(async move {
+        let filter = DiscordParser::new();
+
+        let client = Client::new();
         while let Some(i) = rx.recv().await {
             for ele in i {
-                if !tokens.contains(&ele) {
-                    tokens.push(ele.clone());
-                    let results = dex_client.search(ele).await;
-                    /* match results {
-                        Ok(pairs) => pairs_filter(pairs).await,
-                        Err(err) => println!("{:?}", err),
-                    } */
-                }
+                let results = dex_client.search(ele).await;
+
+                // match ele {
+                //     TokenType::Id(id) => todo!(),
+                //     TokenType::Name(name) => todo!(),
+                //     TokenType::Pairs(pairs) => {
+                //         if pairs.len() > 0 {
+                //             // filter.get_transaction_info(&client, values);
+                //         }
+                //         todo!()
+                //     }
+                // }
+
+                // if !tokens.contains(&ele) {
+                //     tokens.push(ele.clone());
+                // token_type.process()
+                // let results = dex_client.search(ele).await;
+
+                /* match results {
+                    Ok(pairs) => pairs_filter(pairs).await,
+                    Err(err) => println!("{:?}", err),
+                } */
+                // }
             }
         }
     });
@@ -91,6 +110,7 @@ impl DexClient {
         let token = match token {
             TokenType::Id(id) => id,
             TokenType::Name(name) => name,
+            TokenType::Pairs(pairs) => unimplemented!(),
         };
 
         let path = self.url.join(format!("dex/search?q={}", token).as_str());

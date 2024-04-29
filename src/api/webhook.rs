@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serenity::{
     all::{ChannelId, GatewayIntents, Message},
     builder::GetMessages,
@@ -6,9 +8,12 @@ use serenity::{
 };
 use tokio::sync::mpsc::Sender;
 
-use crate::repositories::models::TokenType;
+use crate::repositories::{
+    mem::StorageRepo,
+    models::{EnhancedTransaction, Pairs, TokenFinal, TokenType},
+};
 
-use super::filter::Filter;
+use super::discord::DiscordParser;
 
 const APP_ID: &str = "1225649067506532515";
 
@@ -20,24 +25,33 @@ struct Handler {
     tokens: Vec<TokenType>,
     tx: Sender<Vec<TokenType>>,
     client: reqwest::Client,
-    filter: Filter,
+    filter: DiscordParser,
+    enhanced_transactions: Vec<EnhancedTransaction>,
 }
 
 #[async_trait::async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        let mut filter = Filter {
-            values: self.filter.values.clone(),
-        };
-        let res = filter.filter_msg(msg, &self.client).await;
+        // let mut filter = Filter {
+        //     values: self.filter.values.clone(),
+        // };
+        //2 channels requried here? One for each
+        let res = self
+            .filter
+            .filter_msg(msg, &self.client, &self.enhanced_transactions)
+            .await
+            .unwrap();
 
-        if let Err(err) = self.tx.send(res.to_vec()).await {
+        if let Err(err) = self.tx.send(res).await {
             println!("Channel send error: {:?}", err);
         }
     }
 }
 
-pub async fn webhook_messages(tx: Sender<Vec<TokenType>>) {
+pub async fn webhook_messages(
+    tx: Sender<Vec<TokenType>>,
+    // storage_repo: Arc<StorageRepo<TokenFinal>>,
+) {
     let channel_id = ChannelId::new(1225593082427342902);
     let client = http::Http::new(TOKEN);
 
@@ -55,12 +69,11 @@ pub async fn webhook_messages(tx: Sender<Vec<TokenType>>) {
             tokens: Vec::new(),
             tx,
             client: reqwest::Client::new(),
-            filter: Filter { values: Vec::new() },
+            filter: DiscordParser {},
+            enhanced_transactions: Vec::new(),
         })
         .await
         .expect("Err creating client");
 
     client.start().await;
 }
-
-pub async fn test_123() {}

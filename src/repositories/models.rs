@@ -4,10 +4,36 @@ use serde_json::Number;
 
 pub use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug)]
 pub enum TokenType {
     Id(String),
     Name(String),
+    Pairs(Vec<EnhancedTransaction>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TokenFinal {
+    token_descrip: TokenDescription,
+    is_dexscreener: bool,
+}
+
+impl From<TokenFinal> for String {
+    fn from(value: TokenFinal) -> Self {
+        value.token_descrip.name.to_string()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TokenDescription {
+    pub id: u64,
+    name: String,
+    liquidity: u64, //?
+}
+
+impl From<TokenDescription> for String {
+    fn from(value: TokenDescription) -> Self {
+        value.name.to_string()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -212,7 +238,7 @@ pub struct NativeBalanceChange {
     pub amount: Number,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AccountData {
     pub account: String,
@@ -220,7 +246,7 @@ pub struct AccountData {
     pub token_balance_changes: Option<Vec<TokenBalanceChange>>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenBalanceChange {
     pub user_account: String,
@@ -229,14 +255,14 @@ pub struct TokenBalanceChange {
     pub mint: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RawTokenAmount {
     pub token_amount: String,
     pub decimals: Number,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenTransfer {
     #[serde(flatten)]
@@ -248,14 +274,14 @@ pub struct TokenTransfer {
     pub mint: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferUserAccounts {
     pub from_user_account: Option<String>,
     pub to_user_account: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeTransfer {
     #[serde(flatten)]
@@ -263,7 +289,7 @@ pub struct NativeTransfer {
     pub amount: Number,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Instruction {
     pub accounts: Vec<String>,
@@ -272,7 +298,7 @@ pub struct Instruction {
     pub inner_instructions: Vec<InnerInstruction>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct InnerInstruction {
     pub accounts: Vec<String>,
@@ -280,13 +306,13 @@ pub struct InnerInstruction {
     pub program_id: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Collection {
     pub key: String,
     pub verified: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Metadata {
     pub name: String,

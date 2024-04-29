@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, thread};
 
 use chrono::{DateTime, Duration, TimeDelta, Utc};
 use reqwest::{header, Body, Client};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, to_string_pretty, Value};
 use serenity::all::Message;
+use tracing::Level;
 use url::Url;
 
 use crate::{
@@ -16,14 +17,23 @@ use crate::{
     },
 };
 
-pub struct Filter {
-    pub values: Vec<Value>,
+pub struct DiscordParser {
+    // pub values: Vec<Value>,
 }
 
-impl Filter {
-    pub async fn filter_msg<T>(&mut self, msg: Message, client: &Client) -> Vec<T> {
+impl DiscordParser {
+    pub fn new() -> Self {
+        Self {}
+    }
+    pub async fn filter_msg(
+        &self,
+        msg: Message,
+        client: &Client,
+        state: &Vec<EnhancedTransaction>,
+    ) -> crate::error::Result<Vec<TokenType>> {
         let mut tokens: Vec<TokenType> = Vec::new();
-        /*         let mut values: Vec<Value> = Vec::new(); */
+        let mut values: Vec<Value> = Vec::new();
+
         let value = serde_json::to_value(msg).unwrap();
 
         let arr = value["embeds"][0].get("fields").unwrap();
@@ -32,8 +42,10 @@ impl Filter {
             let mut found = false;
             for ele in j {
                 if found {
-                    &self.values.push(ele.clone());
-                    self.get_transaction_info(client).await;
+                    values.push(ele.clone());
+
+                    let enhanced_transactions = self.get_transaction_info(client, &values).await?;
+                    tokens.push(TokenType::Pairs(enhanced_transactions));
                     found = false;
                 }
                 if ele["value"].to_string().contains("minted") {
@@ -81,70 +93,76 @@ impl Filter {
             }
         }
         println!("{:?}", tokens.len());
-        tokens
+        Ok(tokens)
     }
 
-    /* #[derive(Deserialize, Serialize, Debug)]
-    #[serde(rename_all = "camelCase")]
-    pub struct ParseTransactionsRequest {
-        pub transactions: Vec<String>,
-    } */
+    pub async fn get_transaction_info(
+        &self,
+        client: &Client,
+        values: &Vec<Value>,
+    ) -> crate::error::Result<Vec<EnhancedTransaction>> {
+        let span = tracing::span!(Level::INFO, "main");
+        // loop {
+        let guard = span.enter();
 
-    async fn get_transaction_info(&self, client: &Client, storage_repo: StorageRepository) {
-        loop {
-            let mut vec: Vec<String> = Vec::new();
-            for ele in &self.values {
-                let mut r = ele["value"].to_string();
-                r.remove(r.len() - 1);
+        // thread::sleep(std::time::Duration::from_secs(10));
+        tokio::time::sleep(std::time::Duration::from_secs(15)).await;
+        let mut vec: Vec<String> = Vec::new();
+        let mut stack: Vec<EnhancedTransaction> = Vec::new();
 
-                println!("{:?}", r);
-                let jim = r
-                    .split("/tx/")
-                    .map(|s| s.to_string())
-                    .collect::<Vec<String>>();
+        // while stack.len() == 0 {
+        for ele in values {
+            let mut r = ele["value"].to_string();
+            r.remove(r.len() - 1);
 
-                let token_addr = jim.get(1).unwrap().to_string();
+            // println!("{:?}", r);
+            let jim = r
+                .split("/tx/")
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
 
-                vec.push(token_addr.to_string());
+            let token_addr = jim.get(1).unwrap().to_string();
 
-                let asfaf = Url::parse(
+            tracing::info!(parsed = ?token_addr, "token_addr");
+
+            vec.push(token_addr.to_string());
+
+            let asfaf = Url::parse(
             "https://api.helius.xyz/v0/transactions?api-key=c23e1823-5a4d-4739-9e8d-4b4936a3a3d5",
         );
 
-                let json_body = serde_json::to_value(&vec).unwrap();
+            let json_body = serde_json::to_value(&vec).unwrap();
 
-                let body = json!({ "transactions": json_body });
+            let body = json!({ "transactions": json_body });
 
-                println!("{:?}", body);
+            // println!("{:?}", body);
 
-                let client = reqwest::Client::new();
-                let response = client
-                    .post(asfaf.unwrap())
-                    .header("Content-Type", "application/json")
-                    .json(&body)
-                    .send()
-                    .await
-                    .unwrap();
+            let client = reqwest::Client::new();
+            let response = client
+                .post(asfaf.unwrap())
+                .header("Content-Type", "application/json")
+                .json(&body)
+                .send()
+                .await?;
 
-                // Handle response
-                let status = response.status();
-                if status.is_success() {
-                    println!("Success! Response: {:?}", response);
+            // Handle response
+            let status = response.status();
+            if status.is_success() {
+                println!("Success! Response: {:?}", status);
 
-                    let asfa = response.json::<Vec<EnhancedTransaction>>().await.unwrap();
-
-                    println!("Success: {:?}", asfa);
-                } else {
-                    println!("Error: {}", status);
-                    let error_text = response.text().await.unwrap();
-                    println!("Error details: {}", error_text);
-                }
+                stack = response.json::<Vec<EnhancedTransaction>>().await.unwrap();
+                println!("{:?}", stack.len());
+                println!("Success: {:?}", stack);
+            } else {
+                println!("Error: {}", status);
+                let error_text = response.text().await?;
+                println!("Error details: {}", error_text);
             }
-
-            /*     let asfa = serde_json::from_str::<EnhancedTransaction>(&asfa.text().await.unwrap());
-
-            println!("{:?}", asfa); */
+            // }
         }
+        // }
+        println!("Enhanced transaction done");
+        Ok(stack)
     }
 
     pub async fn pairs_filter(pairs: Pairs) {

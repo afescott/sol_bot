@@ -12,6 +12,8 @@ chrono = "0.4.37"
 discord = { git = "https://github.com/SpaceManiac/discord-rs" }
 reqwest = { version = "0.12", features = [ "json", "blocking"], default-features = true }
 thiserror = "1"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
 regex = "1.10.4"
 serde = { version = "1", features = ["derive", "std", "alloc"], default-features = false }
 serde-enum-str = "0.4"
