@@ -5,8 +5,6 @@ use std::{
 
 use serde::de::DeserializeOwned;
 
-use super::models::Pairs;
-
 #[async_trait::async_trait]
 pub trait Provider: Send + Sync + 'static {
     fn new() -> Self;
@@ -45,8 +43,6 @@ where
         }
     }
 }
-
-pub async fn find_token(pairs: Vec<Pairs>) {}
 
 #[derive(Debug, Clone)]
 pub enum RequestType {

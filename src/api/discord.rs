@@ -54,7 +54,6 @@ impl DiscordParser {
                         if !part.contains("tokens") && part.contains('.') {
                             let part = part.replace('.', "");
                             if part.contains("token") {
-                                /*                             println!("{:?}", part); */
                                 let words = &part
                                     .split(' ')
                                     .map(|s| s.to_string())
@@ -63,25 +62,17 @@ impl DiscordParser {
                                     words.get(4).unwrap().replace(['.', '"'], ""),
                                 ));
                             } else {
-                                println!("{:?}", ele);
                                 let mut count = 0;
                                 let mut string = "".to_string();
                                 for ele in part.split(' ') {
                                     let part = ele.replace(['.', '"'], "");
                                     count += 1;
-
-                                    /*                                 println!("{:?}", part); */
                                     if count > 2 {
                                         string += &part;
                                         string += " ";
-                                        //if counter greater than word length
-                                        /* if count != part.len() - 1 {
-                                            string += " ";
-                                        } */
                                     }
                                 }
                                 string.remove(string.len() - 1).to_string();
-                                println!("{:?}", string);
                                 tokens.push(TokenType::Name(string));
                             }
                         }
@@ -152,7 +143,7 @@ impl DiscordParser {
 
                 stack = response.json::<Vec<EnhancedTransaction>>().await.unwrap();
                 println!("{:?}", stack.len());
-                println!("Success: {:?}", stack);
+            /*                 println!("Success: {:?}", stack); */
             } else {
                 println!("Error: {}", status);
                 let error_text = response.text().await?;
@@ -163,33 +154,5 @@ impl DiscordParser {
         // }
         println!("Enhanced transaction done");
         Ok(stack)
-    }
-
-    pub async fn pairs_filter(pairs: Pairs) {
-        for ele in pairs.pairs {
-            if let Some(time_created_pair) = ele.pair_created_at {
-                /*             let time = chrono::DateTime::from_timestamp_millis(1619248666000); */
-
-                /*             let time = chrono::DateTime::from_timestamp_millis(time.try_into().unwrap()); */
-                println!("Created date: {:?}", time_created_pair);
-                let time = TimeDelta::new(300, 0);
-                let five_mins = Duration::num_milliseconds(&time.unwrap());
-
-                /*             println!("{:?}", five_mins); */
-                let r = five_mins + Utc::now().timestamp_millis();
-                // pair created : 500,    now: 500 + 5.   pair created - now + 5
-                println!("Now: {:?}", Utc::now().timestamp_millis());
-                /*             println!("now + 5 mins: {:?}", r); */
-
-                let time_deducted = r - i64::try_from(time_created_pair).unwrap();
-                /*             println!("Now minus created date: {:?}", time_deducted); */
-
-                if time_deducted < five_mins {
-                    println!("OK");
-                } else {
-                    /*                 println!("Not ok"); */
-                }
-            }
-        }
     }
 }
