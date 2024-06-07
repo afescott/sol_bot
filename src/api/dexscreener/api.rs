@@ -3,7 +3,6 @@ use serde::de::DeserializeOwned;
 use url::Url;
 
 use crate::error::Result;
-use crate::repositories::models::{Pairs, TokenType};
 
 pub const BASE_URL: &str = "https://api.dexscreener.com/latest/";
 
@@ -33,7 +32,7 @@ impl DexClient {
     }
 
     /// Performs an HTTP `GET` request to the `https://api.dexscreener.com/latest/dex/search/?q=:q` path.
-    pub async fn search(&self, token: TokenType) -> Result<Pairs> {
+    /* pub async fn search(&self, token: TokenType) -> Result<Pairs> {
         let token = match token {
             TokenType::Id(id) => {
                 println!("id: {:?}", id);
@@ -57,7 +56,7 @@ impl DexClient {
             .await?;
 
         Ok(r.json::<Pairs>().await?)
-    }
+    } */
 
     async fn get_token<T: DeserializeOwned>(&self, path: &str) -> Result<String> {
         /*         Ok( */

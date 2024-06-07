@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 mod error;
 pub mod format;
+mod setup;
 pub use format::format_addresses;
 pub mod api;
 pub mod repositories;
@@ -16,19 +17,18 @@ mod util;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
-    /*     let storage_enhanced_transactions = Arc::new(StorageRepo::<TokenFinal>::new()); */
+
+    let storage_enhanced_transactions = Arc::new(StorageRepo::<TokenFinal>::new());
 
     /*     let (tx, mut rx) = tokio::sync::mpsc::channel(10000); */
 
     let dex_client = DexClient::default();
 
-    // thread 1: access webhook. use channel to send new tokens
+    // task 1: access webhook. use channel to send new tokens
     let r = tokio::spawn(async move { /*         webhook_messages(tx).await; */ });
 
-    //thread 2: receive new tokens.  search via dexclient & other sources
+    //task 2: receive new tokens.  search via dexclient & other sources
     let s = tokio::spawn(async move {
-        /*         let filter = DiscordParser::new(); */
-
         let client = Client::new();
         /* while let Some(i) = rx.recv().await {
             for ele in i {

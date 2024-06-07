@@ -17,9 +17,7 @@ use crate::{
     },
 };
 
-pub struct DiscordParser {
-    // pub values: Vec<Value>,
-}
+pub struct DiscordParser {}
 
 impl DiscordParser {
     pub fn new() -> Self {
@@ -93,15 +91,12 @@ impl DiscordParser {
         values: &Vec<Value>,
     ) -> crate::error::Result<Vec<EnhancedTransaction>> {
         let span = tracing::span!(Level::INFO, "main");
-        // loop {
         let guard = span.enter();
 
-        // thread::sleep(std::time::Duration::from_secs(10));
         tokio::time::sleep(std::time::Duration::from_secs(15)).await;
         let mut vec: Vec<String> = Vec::new();
         let mut stack: Vec<EnhancedTransaction> = Vec::new();
 
-        // while stack.len() == 0 {
         for ele in values {
             let mut r = ele["value"].to_string();
             r.remove(r.len() - 1);
@@ -126,8 +121,6 @@ impl DiscordParser {
 
             let body = json!({ "transactions": json_body });
 
-            // println!("{:?}", body);
-
             let client = reqwest::Client::new();
             let response = client
                 .post(asfaf.unwrap())
@@ -143,15 +136,12 @@ impl DiscordParser {
 
                 stack = response.json::<Vec<EnhancedTransaction>>().await.unwrap();
                 println!("{:?}", stack.len());
-            /*                 println!("Success: {:?}", stack); */
             } else {
                 println!("Error: {}", status);
                 let error_text = response.text().await?;
                 println!("Error details: {}", error_text);
             }
-            // }
         }
-        // }
         println!("Enhanced transaction done");
         Ok(stack)
     }
