@@ -8,17 +8,15 @@ use std::sync::Arc;
 
 mod error;
 pub mod format;
-mod setup;
 pub use format::format_addresses;
 pub mod api;
 pub mod repositories;
-mod util;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let storage_enhanced_transactions = Arc::new(StorageRepo::<TokenFinal>::new());
+    /*     let storage_enhanced_transactions = Arc::new(StorageRepo::<TokenFinal>::new()); */
 
     /*     let (tx, mut rx) = tokio::sync::mpsc::channel(10000); */
 
