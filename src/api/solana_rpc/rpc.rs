@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crossbeam_channel::Receiver;
 use solana_client::{
     rpc_client::RpcClient,
@@ -8,6 +10,7 @@ use solana_client::{
 use solana_pubsub_client::pubsub_client::PubsubClient;
 use solana_sdk::{
     commitment_config::{CommitmentConfig, CommitmentLevel},
+    pubkey::Pubkey,
     signature::Signature,
 };
 use solana_transaction_status::UiTransactionEncoding;
@@ -47,41 +50,43 @@ impl SolanaRpc {
 
     fn process_transaction(&self, r: Receiver<Response<RpcLogsResponse>>) {
         loop {
-            let log_response = r.recv().unwrap();
+            let log_response = r.recv();
 
-            let signature = log_response.value.signature;
-            let mut next = false;
+            if let Ok(log_response) = log_response {
+                let signature = log_response.value.signature;
+                let mut next = false;
 
-            for ele in log_response.value.logs {
-                //follow guide and test at each if
+                for ele in log_response.value.logs {
+                    //follow guide and test at each if
 
-                if ele.contains("11111111111111111111111111111111") {
-                    next = true;
-                }
-
-                // the transaction is ahead by one
-                if ele.contains("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX") {
-                    if next {
-                        println!("found serum with next");
-                        /*                         println!("{:?}", ele); */
-
-                        let signature = solana_sdk::bs58::decode(signature.as_bytes())
-                            .into_vec()
-                            .unwrap();
-
-                        let transcation_result = self.client.get_transaction_with_config(
-                            &Signature::new(&signature),
-                            RpcTransactionConfig {
-                                encoding: Some(UiTransactionEncoding::Base64),
-                                commitment: Some(CommitmentConfig::confirmed()),
-                                max_supported_transaction_version: Some(1),
-                            },
-                        );
-                        if let Ok(transaction) = transcation_result {
-                            find_mint_token(transaction.transaction.meta);
-                        }
+                    if ele.contains("11111111111111111111111111111111") {
+                        next = true;
                     }
-                    next = false;
+
+                    // the transaction is ahead by one
+                    if ele.contains("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX") {
+                        if next {
+                            // println!("found serum with next");
+                            /*                         println!("{:?}", ele); */
+
+                            let signature = solana_sdk::bs58::decode(signature.as_bytes())
+                                .into_vec()
+                                .unwrap();
+
+                            let transcation_result = self.client.get_transaction_with_config(
+                                &Signature::new(&signature),
+                                RpcTransactionConfig {
+                                    encoding: None,
+                                    commitment: Some(CommitmentConfig::confirmed()),
+                                    max_supported_transaction_version: Some(1),
+                                },
+                            );
+                            if let Ok(transaction) = transcation_result {
+                                find_mint_token(transaction.transaction);
+                            }
+                        }
+                        next = false;
+                    }
                 }
             }
         }
