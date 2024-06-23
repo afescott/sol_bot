@@ -14,21 +14,26 @@ use solana_sdk::{
     signature::Signature,
 };
 use solana_transaction_status::UiTransactionEncoding;
+use tokio::sync::broadcast::Sender;
 
 use crate::api::solana_rpc::transaction::find_mint_token;
 
-struct SolanaRpc {
+use super::Market;
+
+pub struct SolanaRpc {
     client: RpcClient,
+    sender: Sender<Market>,
 }
 
 impl SolanaRpc {
-    fn new() -> Self {
+    pub fn new(sender: Sender<Market>) -> Self {
         Self {
             client: RpcClient::new("https://api.mainnet-beta.solana.com"),
+            sender,
         }
     }
 
-    fn get_transactions(&self) {
+    pub fn get_transactions(&self) {
         let serum_openbook =
             solana_sdk::bs58::decode("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX".as_bytes())
                 .into_vec()
@@ -82,7 +87,11 @@ impl SolanaRpc {
                                 },
                             );
                             if let Ok(transaction) = transcation_result {
-                                find_mint_token(transaction.transaction);
+                                let market = find_mint_token(transaction.transaction);
+
+                                if let Some(market) = market {
+                                    &self.sender.send(market);
+                                }
                             }
                         }
                         next = false;
@@ -91,11 +100,4 @@ impl SolanaRpc {
             }
         }
     }
-}
-
-#[test]
-fn channel() {
-    let bot = SolanaRpc::new();
-
-    bot.get_transactions();
 }

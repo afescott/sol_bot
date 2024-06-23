@@ -1,8 +1,29 @@
-In progress (thus far iterative)
 
-Bin exec dedicated to finding newly minted tokens on the solana blockchain. Then using Dexscreener to find valid tokenomics before purchasing via Jupiter api. 
+IN PROGRESS
 
-TODO In memory storage via Arc hashmaps based on token type whilst liquidity is not added on Raydium 
+Bin exec dedicated to finding newly minted tokens on the solana blockchain. Then using dex screener combined with rug checkers/token sniffer to find legit tokenomics
+
+
+Notes
+TODO:
+
+A) // asynchronously check:
+1) dex_screener  
+2) legit non scam attributes 
+https://rugcheck.xyz/tokens/CqWRZJcDE7GXWvgA9CHMnksDf6p1VmZ49Rg5a9WiCsRK
+https://solintel.io/token/CqWRZJcDE7GXWvgA9CHMnksDf6p1VmZ49Rg5a9WiCsRK
+
+B) In memory storage via Arc hashmaps based on token type whilst liquidity is not added on Raydium 
+
+
+
+
+
+
+
+
+
+
 
 
 
