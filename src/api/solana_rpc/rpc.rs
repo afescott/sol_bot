@@ -14,7 +14,7 @@ use solana_sdk::{
     signature::Signature,
 };
 use solana_transaction_status::UiTransactionEncoding;
-use tokio::sync::broadcast::Sender;
+use std::sync::mpsc::Sender;
 
 use crate::api::solana_rpc::transaction::find_mint_token;
 
@@ -22,11 +22,11 @@ use super::Market;
 
 pub struct SolanaRpc {
     client: RpcClient,
-    sender: Sender<Market>,
+    sender: tokio::sync::broadcast::Sender<Market>,
 }
 
 impl SolanaRpc {
-    pub fn new(sender: Sender<Market>) -> Self {
+    pub fn new(sender: tokio::sync::broadcast::Sender<Market>) -> Self {
         Self {
             client: RpcClient::new("https://api.mainnet-beta.solana.com"),
             sender,
@@ -71,9 +71,6 @@ impl SolanaRpc {
                     // the transaction is ahead by one
                     if ele.contains("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX") {
                         if next {
-                            // println!("found serum with next");
-                            /*                         println!("{:?}", ele); */
-
                             let signature = solana_sdk::bs58::decode(signature.as_bytes())
                                 .into_vec()
                                 .unwrap();
@@ -90,6 +87,7 @@ impl SolanaRpc {
                                 let market = find_mint_token(transaction.transaction);
 
                                 if let Some(market) = market {
+                                    /*                                     println!("{:?}", market); */
                                     &self.sender.send(market);
                                 }
                             }

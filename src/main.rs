@@ -1,15 +1,17 @@
-use api::dexscreener::{api::DexClient, Pair};
-use error::Result;
-use repositories::mem::StorageRepo;
-pub use reqwest::{self, Client, IntoUrl, Url};
-use std::{collections::HashMap, sync::Arc};
-use tokio::sync::broadcast;
+use std::sync::Arc;
+use tokio::time::Instant;
 
+use api::Market;
+use error::Result;
+use repositories::dex_screener::DexMem;
+pub use reqwest::{self, Client, IntoUrl, Url};
 // Dexscreener API URL (https://docs.dexscreener.com/api/reference).
 
 mod error;
 pub mod format;
 pub use format::format_addresses;
+
+use crate::api::rugcheck::api::RugCheckClient;
 pub mod api;
 pub mod repositories;
 
@@ -17,61 +19,52 @@ pub mod repositories;
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let dex_client = DexClient::default();
-
-    let (tx, mut rx1) = broadcast::channel(16);
+    let (tx, rx1) = tokio::sync::broadcast::channel::<Market>(100000);
     let mut rx2 = tx.subscribe();
 
-    let sol_api = api::SolanaRpc::new(tx);
-    // task 1: access webhook. use channel to send new tokens
-    let handle = std::thread::spawn(move || {
+    // task 1: subscribe to solana webhook webhook. use channel to send new tokens
+    let handle = tokio::task::spawn(async move {
+        println!("starting sol webhook");
+
+        let sol_api = api::SolanaRpc::new(tx);
         sol_api.get_transactions();
     });
 
-    let mut hash_map: HashMap<String, Pair> = HashMap::new();
+    let client = Arc::new(Client::new());
 
-    //task 1 check dex_screener api
-    tokio::spawn(async move {
-        while let Ok(res) = rx1.recv().await {
-            println!("fix market token address val received:{:?}", res);
+    let client_1 = client.clone();
+    let client_2 = client.clone();
 
-            let pair = dex_client
-                .get_token_by_addr(res.token_address.to_string())
-                .await
-                .unwrap();
+    let xyz_client = RugCheckClient::new(client_2);
+    let dex_mem = DexMem::new(rx1, client_1);
 
-            let pair = pair.pairs;
+    // task 2: listen for incoming tokens and verify tokenomics via dex_screener
+    let handle_2 = tokio::spawn(async move {
+        dex_mem.loop_awaiting_liquidity_tokens().await;
+    });
 
-            if let Some(pair) = pair {
-                if let Some(pair) = pair.first() {
-                    hash_map.insert(res.token_address.to_string(), pair.to_owned());
-                }
+    // task 3: use xyz to ensure token "legitimacy"
+    let handle_3 = tokio::spawn(async move {
+        //check for memory
+        while let Ok(s) = rx2.recv().await {
+            /*             if let Ok(s) = result { */
+            let now = Instant::now();
+            println!("trying xyz");
+            /*                 dex_client.loop_awaiting_liquidity_tokens(s).await; */
+            let r = xyz_client
+                .get_token_reliability_info(s.token_address.to_string())
+                .await;
+
+            if let Ok(done) = r {
+                println!("xyz: {:?}", done);
+            } else {
+                println!("xyz failed: {:?}", s.token_address.to_string());
             }
+            println!("xyz elasped: {:.3?}", now.elapsed());
         }
     });
 
-    //task 2 check token sniffer etc
-    tokio::spawn(async move {
-        while let Ok(res) = rx2.recv().await {
-            //check for legit tokenomics
-        }
-    });
+    /*     tokio::spawn(async move {}); */
 
-    /* //task 2: receive new tokens.  search via dexclient & other sources
-    let s = tokio::spawn(async move {
-        let client = Client::new();
-        /* while let Some(i) = rx.recv().await {
-            for ele in i {
-                let results = dex_client.search(ele).await;
-
-                match results {
-                    Ok(pairs) => pairs_filter(pairs).await,
-                    Err(err) => println!("{:?}", err),
-                }
-                // }
-            }
-        } */
-    }); */
-
-    /*     let _r = tokio::join!(r, s); */
+    tokio::join!(handle_2, handle, handle_3);
 }

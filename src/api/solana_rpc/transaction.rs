@@ -38,7 +38,6 @@ pub fn find_mint_token(transaction: EncodedTransactionWithStatusMeta) -> Option<
     if let EncodedTransaction::Json(transaction) = transaction.transaction {
         match transaction.message {
             solana_transaction_status::UiMessage::Parsed(parsed) => {
-                println!("{:?}", parsed);
                 let instructions = parsed.instructions;
                 let key = &parsed.account_keys[0];
 
@@ -46,14 +45,10 @@ pub fn find_mint_token(transaction: EncodedTransactionWithStatusMeta) -> Option<
                     match ele {
                         solana_transaction_status::UiInstruction::Compiled(compiled) => {
                             let instructions = compiled.accounts;
-
-                            println!("{:?}", compiled.data);
                         }
 
                         solana_transaction_status::UiInstruction::Parsed(parsed) => match parsed {
-                            solana_transaction_status::UiParsedInstruction::Parsed(parsed) => {
-                                println!("parsed: {:?}", parsed);
-                            }
+                            solana_transaction_status::UiParsedInstruction::Parsed(parsed) => {}
                             solana_transaction_status::UiParsedInstruction::PartiallyDecoded(
                                 decoded,
                             ) => println!("decoded: {:?}", decoded),
@@ -77,32 +72,26 @@ pub fn find_mint_token(transaction: EncodedTransactionWithStatusMeta) -> Option<
                     }
 
                     if transaction_conditions_met {
-                        println!("{:?}", raw);
                         let safe_index = |idx: u8| -> Pubkey {
-                            println!(
-                                "instruction number 8 {:?}, account instructions length: {:?}",
-                                idx as usize,
-                                raw.account_keys.len()
-                            );
                             if idx as usize >= raw.account_keys.len() {
                                 return srm_pub_key;
                             }
                             Pubkey::from_str(&raw.account_keys[idx as usize]).unwrap()
                         };
 
-                        println!("{:?}", ele);
-
                         let mut avoid = programs_to_avoid.get(&raw.account_keys[11]);
 
                         let potential_token_address = if avoid.is_some() {
-                            println!(" not 11 ");
                             avoid = programs_to_avoid.get(&raw.account_keys[10]);
                             if avoid.is_some() {
-                                println!(" not 10 ");
                                 avoid = programs_to_avoid.get(&raw.account_keys[12]);
                                 if avoid.is_some() {
-                                    println!(" not 12 ");
-                                    None
+                                    avoid = programs_to_avoid.get(&raw.account_keys[9]);
+                                    if avoid.is_some() {
+                                        None
+                                    } else {
+                                        Some(9)
+                                    }
                                 } else {
                                     Some(12)
                                 }
@@ -114,7 +103,7 @@ pub fn find_mint_token(transaction: EncodedTransactionWithStatusMeta) -> Option<
                         };
 
                         if let Some(addr) = potential_token_address {
-                            println!("token address: {:?}", potential_token_address);
+                            /*                             println!("token address: {:?}", potential_token_address); */
 
                             let market = super::Market {
                                 market: safe_index(0),
