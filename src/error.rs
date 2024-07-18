@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tokio::sync::mpsc::error::SendError;
+
+use crate::{api::rugcheck::XyzTokenRisk, models::TokenRiskMetaData};
 
 /// Type alias for `Result<T, ClientError>`
 pub type Result<T = (), E = ClientError> = std::result::Result<T, E>;
@@ -15,6 +18,9 @@ pub enum ClientError {
 
     #[error(transparent)]
     Url(#[from] url::ParseError),
+
+    #[error(transparent)]
+    Error(#[from] SendError<TokenRiskMetaData>),
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PairResponse<T> {

@@ -1,18 +1,30 @@
 use reqwest::Client;
 use std::{sync::Arc, time::Duration};
-use tokio::{sync::broadcast::Receiver, time::Instant};
+use tokio::{
+    sync::{broadcast::Receiver, mpsc::Sender},
+    time::Instant,
+};
 
-use crate::api::{dexscreener::api::DexClient, Market};
+use crate::{
+    api::{dexscreener::api::DexClient, Market},
+    models::TokenRiskMetaData,
+};
 
 #[derive(Debug)]
 pub struct DexMem {
+    tx: Sender<(TokenRiskMetaData, bool)>,
     rx: Receiver<Market>,
     dex_client: DexClient,
     storage: Vec<Market>,
 }
 impl DexMem {
-    pub fn new(rx: Receiver<Market>, client: Arc<Client>) -> Self {
+    pub fn new(
+        tx: Sender<(TokenRiskMetaData, bool)>,
+        rx: Receiver<Market>,
+        client: Arc<Client>,
+    ) -> Self {
         Self {
+            tx,
             rx,
             dex_client: DexClient::new(client),
             storage: Vec::new(),
@@ -37,7 +49,9 @@ impl DexMem {
                         /*                         println!("count: {:?}", self.dex_client.dex.len()); */
                         if response.pairs.is_some() {
                             println!("dex_screener success: {:?}", ele.token_address.to_string());
-
+                            self.tx
+                                .send(TokenRiskMetaData::DexScreenerResponse(response))
+                                .await;
                             self.storage
                                 .retain(|item| item.token_address != ele.token_address);
                         } else {
