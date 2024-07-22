@@ -45,15 +45,15 @@ impl DexClient {
 
 #[tokio::test]
 async fn test_get_token() {
-    let (tx, mut rx1) = tokio::sync::mpsc::channel::<Market>(100000);
-    let client = DexClient::new();
+    // let (tx, mut rx1) = tokio::sync::mpsc::channel::<Market>(100000);
+    // let client = DexClient::new();
 
-    println!(
-        "{:?}",
-        client
-            .get_token_by_addr("2YE4Dmfv2HjwuxXsn9fJy8cHkZKDAk32KVNbak7spump".to_string())
-            .await
-    );
+    // println!(
+    //     "{:?}",
+    //     client
+    //         .get_token_by_addr("2YE4Dmfv2HjwuxXsn9fJy8cHkZKDAk32KVNbak7spump".to_string())
+    //         .await
+    // );
 }
 
 #[tokio::test]

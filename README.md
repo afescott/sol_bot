@@ -1,6 +1,8 @@
 
 IN PROGRESS
 
+check xyz fist as it will always return
+
 Bin exec dedicated to finding newly minted tokens on the solana blockchain. Then using dex screener combined with rug checkers/token sniffer to find legit tokenomics
 
 

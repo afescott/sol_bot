@@ -120,11 +120,6 @@ pub fn find_mint_token(transaction: EncodedTransactionWithStatusMeta) -> Option<
                             return Some(market);
                         }
                     }
-                    /* let asfaf = spl_associated_token_account::get_associated_token_address(
-                        &pub_key,
-                        &token_address,
-                    ); */
-
                     //next steps will take you away from the guide probs since you're using jupituer
                     // get the token requirements for jupiter transaction
                     /*                     } */
@@ -135,11 +130,7 @@ pub fn find_mint_token(transaction: EncodedTransactionWithStatusMeta) -> Option<
         };
     }
     None
-
-    /*     if transaction_conditions_met {} */
 }
-
-pub fn create_raydium_transaction(market: Market) {}
 
 //excess
 //

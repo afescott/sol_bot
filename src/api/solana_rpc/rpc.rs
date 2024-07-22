@@ -22,11 +22,11 @@ use super::Market;
 
 pub struct SolanaRpc {
     client: RpcClient,
-    sender: tokio::sync::broadcast::Sender<Market>,
+    sender: tokio::sync::mpsc::Sender<Market>,
 }
 
 impl SolanaRpc {
-    pub fn new(sender: tokio::sync::broadcast::Sender<Market>) -> Self {
+    pub fn new(sender: tokio::sync::mpsc::Sender<Market>) -> Self {
         Self {
             client: RpcClient::new("https://api.mainnet-beta.solana.com"),
             sender,

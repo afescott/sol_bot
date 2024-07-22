@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
+use solana_sdk::pubkey::Pubkey;
 use thiserror::Error;
 use tokio::sync::mpsc::error::SendError;
-
-use crate::{api::rugcheck::XyzTokenRisk, models::TokenRiskMetaData};
 
 /// Type alias for `Result<T, ClientError>`
 pub type Result<T = (), E = ClientError> = std::result::Result<T, E>;
@@ -20,7 +19,10 @@ pub enum ClientError {
     Url(#[from] url::ParseError),
 
     #[error(transparent)]
-    Error(#[from] SendError<TokenRiskMetaData>),
+    Error(#[from] SendError<Pubkey>),
+
+    #[error(transparent)]
+    SerdeQsError(#[from] serde_qs::Error),
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PairResponse<T> {
