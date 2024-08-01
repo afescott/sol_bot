@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 
 use crossbeam_channel::Receiver;
 use solana_client::{
@@ -22,23 +22,22 @@ use super::Market;
 
 pub struct SolanaRpc {
     client: RpcClient,
-    sender: tokio::sync::mpsc::Sender<Market>,
+    sender: tokio::sync::broadcast::Sender<Market>,
 }
 
 impl SolanaRpc {
-    pub fn new(sender: tokio::sync::mpsc::Sender<Market>) -> Self {
+    pub fn new(sender: tokio::sync::broadcast::Sender<Market>) -> Self {
         Self {
             client: RpcClient::new("https://api.mainnet-beta.solana.com"),
             sender,
         }
     }
 
-    pub fn get_transactions(&self) {
+    pub async fn get_transactions(&self) {
         let serum_openbook =
             solana_sdk::bs58::decode("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX".as_bytes())
                 .into_vec()
                 .unwrap();
-
         let (r, s) = PubsubClient::logs_subscribe(
             "wss://api.mainnet-beta.solana.com",
             solana_client::rpc_config::RpcTransactionLogsFilter::All,
@@ -50,10 +49,10 @@ impl SolanaRpc {
         )
         .unwrap();
 
-        &self.process_transaction(s);
+        &self.process_transaction(s).await;
     }
 
-    fn process_transaction(&self, r: Receiver<Response<RpcLogsResponse>>) {
+    async fn process_transaction(&self, r: Receiver<Response<RpcLogsResponse>>) {
         loop {
             let log_response = r.recv();
 
@@ -87,8 +86,9 @@ impl SolanaRpc {
                                 let market = find_mint_token(transaction.transaction);
 
                                 if let Some(market) = market {
-                                    /*                                     println!("{:?}", market); */
+                                    /*                                     println!("{:?}", market.token_address.to_string()); */
                                     &self.sender.send(market);
+                                    tokio::time::sleep(Duration::from_secs(5)).await;
                                 }
                             }
                         }

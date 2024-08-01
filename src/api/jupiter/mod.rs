@@ -34,4 +34,30 @@ impl JupiterSwapApiClient {
 
         Ok(response.json::<QuoteResponse>().await?)
     }
+
+    pub async fn buy(&self, pubkey: Pubkey) -> Result<()> {
+        let quote_request = QuoteRequest {
+            amount: 1_000_000,
+            input_mint: solana_sdk::pubkey!("So11111111111111111111111111111111111111112"),
+            // this maybe wrong
+            output_mint: pubkey,
+            slippage_bps: 50,
+            ..QuoteRequest::default()
+        };
+
+        let quote_response = self.quote(&quote_request).await?;
+        println!("{quote_response:#?}");
+
+        // POST /swap
+        /* let swap_response = self
+        .swap(&SwapRequest {
+            user_public_key: TEST_WALLET,
+            quote_response: quote_response.clone(),
+            config: TransactionConfig::default(),
+        })
+        .await
+        .unwrap(); */
+
+        Ok(())
+    }
 }

@@ -93,7 +93,6 @@ impl DiscordParser {
         let span = tracing::span!(Level::INFO, "main");
         let guard = span.enter();
 
-        tokio::time::sleep(std::time::Duration::from_secs(15)).await;
         let mut vec: Vec<String> = Vec::new();
         let mut stack: Vec<EnhancedTransaction> = Vec::new();
 

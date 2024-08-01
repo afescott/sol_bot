@@ -13,13 +13,13 @@ pub const BASE_URL: &str = "https://api.dexscreener.com/latest/";
 /// A [Dexscreener API](https://docs.dexscreener.com/api/reference) HTTP client.
 #[derive(Debug)]
 pub struct DexClient {
-    pub client: Arc<Client>,
+    pub client: Client,
     pub url: Url,
     /*     pub dex: Arc<Mutex<Vec<Market>>>, */
 }
 
 impl DexClient {
-    pub fn new(client: Arc<Client>) -> Self {
+    pub fn new(client: Client) -> Self {
         Self {
             url: Url::parse(BASE_URL).unwrap(),
             /*             dex: Arc::new(Mutex::new(Vec::new())), */

@@ -2,37 +2,33 @@ use reqwest::Client;
 use solana_sdk::pubkey::Pubkey;
 use std::{sync::Arc, time::Duration};
 use tokio::{
-    sync::{mpsc::Receiver, mpsc::Sender},
+    sync::{
+        broadcast::Receiver,
+        mpsc::{error::TryRecvError, Sender},
+    },
     time::Instant,
 };
 
 use crate::api::{
     dexscreener::{api::DexClient, Pair},
     rugcheck::api::RugCheckClient,
-    Market,
+    Market, TokenRiskMetaData,
 };
 
 #[derive(Debug)]
 pub struct DexMem {
-    tx: Sender<Pubkey>,
+    tx: Sender<TokenRiskMetaData>,
     rx: Receiver<Market>,
     dex_client: DexClient,
     storage: Vec<Market>,
-    rug_check_client: RugCheckClient,
 }
 impl DexMem {
-    pub fn new(
-        tx: Sender<Pubkey>,
-        rx: Receiver<Market>,
-        client: Arc<Client>,
-        rug_check_client: RugCheckClient,
-    ) -> Self {
+    pub fn new(tx: Sender<TokenRiskMetaData>, rx: Receiver<Market>, client: Client) -> Self {
         Self {
             tx,
             rx,
             dex_client: DexClient::new(client),
             storage: Vec::new(),
-            rug_check_client,
         }
     }
 
@@ -40,19 +36,12 @@ impl DexMem {
         println!("listening");
         loop {
             let result = &self.rx.try_recv();
-            if let Ok(result) = result {
-                let r = self
-                    .rug_check_client
-                    .get_token_reliability_info(result.token_address.to_string())
-                    .await;
 
-                if r.is_ok_and(|x| x) {
-                    self.storage.push(*result);
-                }
+            if let Ok(result) = result {
+                println!("received: {:?}", result);
+                self.storage.push(*result);
             }
             for ele in self.storage.clone() {
-                let now = Instant::now();
-
                 match self
                     .dex_client
                     .get_token_by_addr(ele.token_address.to_string())
@@ -65,8 +54,11 @@ impl DexMem {
                             let response = response.pairs;
                             if let Some(re) = response.expect("no pairs").first() {
                                 //verify these
+                                println!("fdv:: {:?}", re.fdv);
                                 if re.fdv.expect("no fdv") > 10000.0 {}
-                                self.tx.send(ele.token_address).await?;
+                                self.tx
+                                    .send(TokenRiskMetaData::DexScreenerResponse(ele.token_address))
+                                    .await?;
                             }
                             self.storage
                                 .retain(|item| item.token_address != ele.token_address);
@@ -78,8 +70,6 @@ impl DexMem {
 
                     Err(err) => println!("{:?}", err),
                 };
-
-                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }
     }
