@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use reqwest::{header, Client};
 use solana_sdk::pubkey::Pubkey;
@@ -20,9 +20,9 @@ pub struct RugCheckClient {
 }
 
 impl RugCheckClient {
-    pub fn new(client: Client, tx: Sender<TokenRiskMetaData>, rx: Receiver<Market>) -> Self {
+    pub fn new(tx: Sender<TokenRiskMetaData>, rx: Receiver<Market>) -> Self {
         Self {
-            client,
+            client: Client::new(),
             tx,
             rx,
             storage: Vec::new(),
@@ -39,26 +39,33 @@ impl RugCheckClient {
             }
             for ele in self.storage.clone() {
                 let path = format!("https://api.rugcheck.xyz/v1/tokens/{}/report/summary", ele);
-                let r = self
+                match self
                     .client
                     .get(path)
                     .header(header::ACCEPT, "application/json")
                     .send()
-                    .await?;
+                    .await
+                {
+                    Ok(r) => {
+                        let token_risk = r.json::<XyzTokenRisk>().await?;
 
-                let token_risk = r.json::<XyzTokenRisk>().await?;
+                        if token_risk.score < 3000 {
+                            println!(
+                                "risk score low, {:?}: {:?}",
+                                token_risk.score,
+                                ele.to_string()
+                            );
 
-                println!("xyz elasped: {:.3?}", now.elapsed());
+                            self.tx.send(TokenRiskMetaData::XyzResponse(ele)).await?;
 
-                println!("risk score, {:?}", token_risk.score);
-                if token_risk.score < 3000 {
-                    println!("risk score low, {:?}", token_risk.score);
-
-                    self.tx.send(TokenRiskMetaData::XyzResponse(ele)).await?;
-
-                    self.storage
-                        .retain(|item| item.to_string() != ele.to_string());
+                            self.storage
+                                .retain(|item| item.to_string() != ele.to_string());
+                        }
+                    }
+                    Err(e) => println!("Error with rugcheck api"),
                 }
+
+                tokio::time::sleep(Duration::from_secs(5)).await;
             }
         }
     }

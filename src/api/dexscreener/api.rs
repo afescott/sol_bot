@@ -11,7 +11,7 @@ use crate::{
 pub const BASE_URL: &str = "https://api.dexscreener.com/latest/";
 
 /// A [Dexscreener API](https://docs.dexscreener.com/api/reference) HTTP client.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DexClient {
     pub client: Client,
     pub url: Url,
@@ -19,18 +19,16 @@ pub struct DexClient {
 }
 
 impl DexClient {
-    pub fn new(client: Client) -> Self {
+    pub fn new() -> Self {
         Self {
             url: Url::parse(BASE_URL).unwrap(),
-            /*             dex: Arc::new(Mutex::new(Vec::new())), */
-            client,
+            client: reqwest::Client::new(),
         }
     }
 
     /// Performs an HTTP `GET` request to the `https://api.dexscreener.com/latest/dex/search/?q=:q` path.
     pub async fn get_token_by_addr(&self, addr: String) -> Result<PairResponse> {
         let path = self.url.join(format!("dex/tokens/{}", addr).as_str());
-        println!("{:?}", addr);
         let r = self
             .client
             .get(path.unwrap())

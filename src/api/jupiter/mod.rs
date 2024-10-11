@@ -6,7 +6,6 @@ use solana_sdk::pubkey::Pubkey;
 
 const TEST_WALLET: Pubkey = pubkey!("2AQdpHJ2JpcEgPiATUXjQxA8QmafFegfQwSLWSprPicm");
 const BASE_PATH: &str = "https://quote-api.jup.ag/v6";
-
 mod field_as_string;
 pub mod model;
 
