@@ -4,9 +4,6 @@ pub mod api;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct XyzTokenRisk {
-    pub tokenProgram: String,
-    tokenType: String,
-    risks: Vec<Risk>,
     pub score: i32,
 }
 

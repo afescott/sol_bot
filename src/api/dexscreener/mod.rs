@@ -47,7 +47,7 @@ pub struct Token {
     pub symbol: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Serialize, Deserialize)]
 pub struct Transactions {
     pub buys: u64,
     pub sells: u64,
@@ -60,7 +60,7 @@ pub struct Liquidity {
     pub quote: f64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Serialize, Deserialize)]
 pub struct Timed<T> {
     pub m5: T,
     pub h1: T,

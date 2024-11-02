@@ -28,6 +28,9 @@ pub enum ClientError {
 
     #[error(transparent)]
     SendError(#[from] tokio::sync::mpsc::error::SendError<TokenRiskMetaData>),
+
+    #[error("Swap fail Jup")]
+    SwapFail,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PairResponse<T> {

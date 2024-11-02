@@ -1,10 +1,13 @@
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 use solana_sdk::pubkey::Pubkey;
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 use tokio::sync::{broadcast::Receiver, mpsc::Sender};
 
-use crate::api::{dexscreener::api::DexClient, Market, TokenRiskMetaData};
+use crate::api::{
+    dexscreener::{api::DexClient, Liquidity, Timed, Transactions},
+    Market, TokenRiskMetaData,
+};
 
 pub async fn run(
     tx: Sender<TokenRiskMetaData>,
@@ -44,12 +47,14 @@ pub async fn loop_awaiting_liquidity_tokens(
                 if let Some(re) = response.pairs {
                     if let Some(re) = re.first() {
                         //verify these
-                        println!("fdv:: {:?}", re.fdv);
-                        if re.fdv.expect("no fdv") > 10000.0 {
-                            println!("fdv over 10000");
+                        //
+
+                        if re.liquidity.clone().is_some_and(|x| x.usd > 2950.0)
+                            && re.fdv.is_some_and(|x| x > 2950.0)
+                        {
+                            tx.send(TokenRiskMetaData::DexScreenerResponse(result.token_address))
+                                .await?;
                         }
-                        tx.send(TokenRiskMetaData::DexScreenerResponse(result.token_address))
-                            .await?;
                     } else {
                         tx_1.send(result.token_address).await?;
                     }
@@ -57,7 +62,6 @@ pub async fn loop_awaiting_liquidity_tokens(
                     tx_1.send(result.token_address).await?;
                     //not on dex_screener yet
                 }
-                // println!("dex elapsed: {:.3?}", now.elapsed());
             }
 
             Err(err) => println!("{:?}", err),
@@ -75,6 +79,7 @@ pub async fn loop_yet_to_dexscreener(
 ) -> crate::error::Result<()> {
     println!("listening");
     let mut key_storage: Vec<(Pubkey, DateTime<Utc>)> = Vec::new();
+    let mut transactions: HashMap<Pubkey, Timed<Transactions>> = HashMap::new();
     loop {
         if let Ok(res) = rx_1.try_recv() {
             let time = Utc::now();
@@ -86,24 +91,35 @@ pub async fn loop_yet_to_dexscreener(
                     /*                         println!("count: {:?}", self.dex_client.dex.len()); */
                     if let Some(pairs) = response.pairs {
                         if let Some(re) = pairs.first() {
-                            //verify these
-                            println!("{:?}", re.liquidity);
-                            if let Some(fdv) = re.fdv {
-                                if fdv > 10000.0 {
-                                    println!("fdv over 10000.0: {:?}", ele.0);
-                                    key_storage
-                                        .retain(|item| item.0.to_string() != ele.0.to_string());
-
-                                    tx.send(TokenRiskMetaData::DexScreenerResponse(ele.0))
-                                        .await?;
-                                } else {
-                                    key_storage.retain(|obj| {
-                                        let time = Utc::now().signed_duration_since(obj.1);
-                                        println!("since secs: {:?}", time.num_seconds());
-
-                                        time.num_seconds() > 4500
-                                    });
+                            /* if let Some(val) = transactions.get(&ele.0) {
+                                if val.h6 != re.txns.h6 {
+                                    *val = re.txns.clone();
                                 }
+                            } else {
+                                transactions.insert(ele.0, re.txns.clone());
+                            } */
+                            let rasa = transactions.entry(ele.0).or_insert(re.txns.clone());
+                            let r = &transactions[&ele.0];
+                            println!("buys/sells {:?}, token: {:?}", re.txns.h6, ele.0);
+
+                            if re.txns.h6 > r.h6
+                                && re.txns.h6.buys > 400
+                                && re.txns.h6.buys > r.h6.sells
+                                && re.txns.h6.buys > (re.txns.h6.sells * 2)
+                                && re.liquidity.clone().is_some_and(|x| x.usd > 2950.0)
+                                && re.fdv.is_some_and(|x| x > 2950.0)
+                            {
+                                println!("double");
+                                key_storage.retain(|item| item.0.to_string() != ele.0.to_string());
+
+                                tx.send(TokenRiskMetaData::DexScreenerResponse(ele.0))
+                                    .await?;
+                            } else {
+                                key_storage.retain(|obj| {
+                                    let time = Utc::now().signed_duration_since(obj.1);
+
+                                    time.num_seconds() < 1000
+                                });
 
                                 /* key_storage.retain(|obj| {
                                     println!("{:?}", obj.1);

@@ -120,10 +120,6 @@ pub fn find_mint_token(transaction: EncodedTransactionWithStatusMeta) -> Option<
                             return Some(market);
                         }
                     }
-                    //next steps will take you away from the guide probs since you're using jupituer
-                    // get the token requirements for jupiter transaction
-                    /*                     } */
-
                     transaction_conditions_met = true;
                 }
             }

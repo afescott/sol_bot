@@ -1,16 +1,14 @@
-use solana_sdk::pubkey::{self, Pubkey};
-use std::{
-    collections::HashSet,
-    env,
-    sync::{Arc, Mutex},
+use solana_sdk::{
+    pubkey::{self, Pubkey},
+    signature::Keypair,
 };
-use tokio::sync::mpsc::Receiver;
+use std::str::FromStr;
 
 use crate::{
     api::{dexscreener::api::DexClient, rugcheck::api::RugCheckClient},
-    repositories::dex_screener::{loop_yet_to_dexscreener, run},
+    repositories::{dex_screener::run, raydium::raydium_buy},
 };
-use api::{jupiter::JupiterSwapApiClient, Market, TokenRiskMetaData};
+use api::{Market, TokenRiskMetaData};
 use error::Result;
 pub use reqwest::{self, Client, IntoUrl, Url};
 
@@ -20,14 +18,10 @@ mod error;
 pub mod format;
 pub mod repositories;
 
-#[derive(Parser)]
-struct Args {
-    name: String,
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
-    /*     let args: Args = Args::parse(); */
+    let args: Vec<String> = std::env::args().collect();
+    println!("{:?}", args);
     tracing_subscriber::fmt::init();
 
     let (tx, rx1) = tokio::sync::broadcast::channel::<Market>(50);
@@ -45,21 +39,9 @@ async fn main() -> Result<()> {
         }
     });
 
-    let xyz_client = RugCheckClient::new(tx_token_data.clone(), rx2);
-    /*
-    /* let mut dex_mem:
-    /*     Arc<Mutex< */
-        DexMem =
-            DexMem::new(tx_token_data, rx1, client.clone()); */
-    // task 2: listen for incoming tokens and verify tokenomics via dex_screener
-    let handle2 = tokio::spawn(async move {
-        /*         dex_mem.loop_awaiting_liquidity_tokens().await; */
-        loop_yet_to_dexscreener().await;
-    }); */
+    let mut xyz_client = RugCheckClient::new(tx_token_data.clone(), rx2);
 
     let handle4 = tokio::spawn(async move {
-        /* let mut asfasf = clone.lock().unwrap();
-        asfasf.loop_awaiting_liquidity_tokens().await; */
         let dex_client = DexClient::new();
         run(tx_token_data, rx1, dex_client).await;
     });
@@ -70,55 +52,12 @@ async fn main() -> Result<()> {
     });
 
     let handle_purchase_token = tokio::spawn(async move {
-        let jup_api = JupiterSwapApiClient::default();
-        token_wtf(rx_token_data).await;
-        /* //tokens are only received if they meet the requirements
-        let mut tokens: HashSet<Pubkey> = HashSet::new();
-        // let mut temp_hashmap: HashMap<String, bool> = HashMap::new(); //if this is true
-        while let Some(token_meta_data) = rx_token_data.recv().await {
-            match token_meta_data {
-                TokenRiskMetaData::DexScreenerResponse(dex) => {
-                    if tokens.get(&dex).is_some() {
-                        // buy jup_api
-                        if let Err((a)) = jup_api.buy(dex).await {
-                        } else {
-                            tokens.remove(&dex);
-                        }
-                    } else {
-                        tokens.insert(dex);
-                    }
-                }
-                TokenRiskMetaData::XyzResponse(xyz) => {}
-            }
-        } */
+        let user_pubkey: Pubkey = Pubkey::from_str(&args[1]).unwrap();
+        let user_privkey = Keypair::from_base58_string(args[2].as_str());
+        let res = raydium_buy(rx_token_data, user_pubkey, user_privkey).await;
     });
 
     tokio::join!(handle, handle_purchase_token, handle_3, handle4);
-    /*         , handle, handle_3); */
-    /*     handle4); */
 
     Ok(())
-}
-
-pub async fn token_wtf(mut rx_token_data: Receiver<TokenRiskMetaData>) {
-    let jup_api = JupiterSwapApiClient::default();
-    //tokens are only received if they meet the requirements
-    let mut tokens: HashSet<Pubkey> = HashSet::new();
-    // let mut temp_hashmap: HashMap<String, bool> = HashMap::new(); //if this is true
-    while let Some(token_meta_data) = rx_token_data.recv().await {
-        match token_meta_data {
-            TokenRiskMetaData::DexScreenerResponse(dex) => {
-                if tokens.get(&dex).is_some() {
-                    // buy jup_api
-                    if let Err(a) = jup_api.buy(dex).await {
-                    } else {
-                        tokens.remove(&dex);
-                    }
-                } else {
-                    tokens.insert(dex);
-                }
-            }
-            TokenRiskMetaData::XyzResponse(xyz) => {}
-        }
-    }
 }

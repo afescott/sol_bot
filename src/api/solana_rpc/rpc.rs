@@ -86,7 +86,6 @@ impl SolanaRpc {
                                 let market = find_mint_token(transaction.transaction);
 
                                 if let Some(market) = market {
-                                    /*                                     println!("{:?}", market.token_address.to_string()); */
                                     &self.sender.send(market);
                                     tokio::time::sleep(Duration::from_secs(5)).await;
                                 }
