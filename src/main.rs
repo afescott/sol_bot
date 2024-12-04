@@ -1,3 +1,4 @@
+use clap::Parser;
 use solana_sdk::{
     pubkey::{self, Pubkey},
     signature::Keypair,
@@ -6,6 +7,7 @@ use std::str::FromStr;
 
 use crate::{
     api::{dexscreener::api::DexClient, rugcheck::api::RugCheckClient},
+    args::Args,
     repositories::{dex_screener::run, raydium::raydium_buy},
 };
 use api::{Market, TokenRiskMetaData};
@@ -20,8 +22,7 @@ pub mod repositories;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let args: Vec<String> = std::env::args().collect();
-    println!("{:?}", args);
+    let args = Args::parse();
     tracing_subscriber::fmt::init();
 
     let (tx, rx1) = tokio::sync::broadcast::channel::<Market>(50);
@@ -52,8 +53,8 @@ async fn main() -> Result<()> {
     });
 
     let handle_purchase_token = tokio::spawn(async move {
-        let user_pubkey: Pubkey = Pubkey::from_str(&args[1]).unwrap();
-        let user_privkey = Keypair::from_base58_string(args[2].as_str());
+        let user_pubkey: Pubkey = Pubkey::from_str(&args.pub_key).unwrap();
+        let user_privkey = Keypair::from_base58_string(&args.priv_key);
         let res = raydium_buy(rx_token_data, user_pubkey, user_privkey).await;
     });
 
