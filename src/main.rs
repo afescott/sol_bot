@@ -1,8 +1,5 @@
 use clap::Parser;
-use solana_sdk::{
-    pubkey::{self, Pubkey},
-    signature::Keypair,
-};
+use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 use std::str::FromStr;
 
 use crate::{
@@ -55,7 +52,7 @@ async fn main() -> Result<()> {
     let handle_purchase_token = tokio::spawn(async move {
         let user_pubkey: Pubkey = Pubkey::from_str(&args.pub_key).unwrap();
         let user_privkey = Keypair::from_base58_string(&args.priv_key);
-        let res = raydium_buy(rx_token_data, user_pubkey, user_privkey).await;
+        raydium_buy(rx_token_data, user_pubkey, user_privkey).await;
     });
 
     tokio::join!(handle, handle_purchase_token, handle_3, handle4);

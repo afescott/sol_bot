@@ -1,17 +1,9 @@
-use std::{
-    collections::{HashMap, HashSet},
-    str::FromStr,
-};
+use std::{collections::HashSet, str::FromStr};
 
 use solana_sdk::pubkey::Pubkey;
-use solana_transaction_status::{
-    option_serializer::OptionSerializer, EncodedTransaction, EncodedTransactionWithStatusMeta,
-    UiTransaction, UiTransactionStatusMeta,
-};
+use solana_transaction_status::{EncodedTransaction, EncodedTransactionWithStatusMeta};
 
 use lazy_static::lazy_static;
-
-use crate::api::solana_rpc::RaydiumMarket;
 
 use super::Market;
 
@@ -127,31 +119,3 @@ pub fn find_mint_token(transaction: EncodedTransactionWithStatusMeta) -> Option<
     }
     None
 }
-
-//excess
-//
-//
-/*
-let vault_signer_nonce = &ele.data[23..31]; //?
-let market_bytes = &market.market.to_bytes();
-
-let data = vec![market_bytes, vault_signer_nonce.as_bytes()];
-
-//add more validation
- let vault_signer = Pubkey::create_program_address(
-    &data,
-    &Pubkey::from_str("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX")
-        .unwrap(),
-);
-
-let ray = RaydiumMarket::new(market.market);
-
-let token_address = market.base_mint;
-
-let key = solana_sdk::bs58::decode(
-    "qwCrxRSVHcos8aiQ4BjULJDyh2KqSdudUde4tdFQupv".as_bytes(),
-)
-.into_vec()
-.unwrap();
-
-let pub_key = Pubkey::new(&key); */

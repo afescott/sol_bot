@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use solana_sdk::{pubkey::Pubkey, signature::Keypair};
 use tokio::sync::mpsc::Receiver;
 
@@ -52,8 +53,6 @@ pub async fn new_api(buy_req: RaydiumBuyRequest) {
         .send()
         .await
         .unwrap();
-
-    println!("{:?}", key.text().await);
 }
 
 #[tokio::test]
@@ -61,11 +60,10 @@ async fn test_raydium() {
     //priv key
     let key_pair = Keypair::from_base58_string("");
 
-    let asfa = bs58::encode(key_pair.to_bytes());
+    let pair = bs58::encode(key_pair.to_bytes());
 
     let buy = RaydiumBuyRequest {
-        private_key: asfa.into_string(),
-
+        private_key: pair.into_string(),
         mint: "5WuzpsqhCbndpbJ72Q3WDRG5swZwVEU7wkLZH7qGpump".to_string(),
         amount: 0.001,
         microlamports: 433000,

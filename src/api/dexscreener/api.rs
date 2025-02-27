@@ -1,12 +1,7 @@
-use std::sync::Arc;
-
-use reqwest::{header, Client, RequestBuilder};
+use reqwest::{header, Client};
 use url::Url;
 
-use crate::{
-    api::{dexscreener::PairResponse, Market},
-    error::Result,
-};
+use crate::{api::dexscreener::PairResponse, error::Result};
 
 pub const BASE_URL: &str = "https://api.dexscreener.com/latest/";
 
